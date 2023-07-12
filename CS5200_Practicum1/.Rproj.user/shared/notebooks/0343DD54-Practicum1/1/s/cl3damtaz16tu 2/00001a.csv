@@ -1,0 +1,39 @@
+"0","CREATE PROCEDURE AddIncident(
+IN Bid INTEGER,
+IN Bdate DATE,
+IN BairportName TEXT,
+IN Bstate TEXT,
+IN Bairline TEXT,
+IN Baircraft TEXT,
+IN BflightPhase TEXT,
+IN Balititude INTEGER,
+IN Bskycondition TEXT,
+IN Bpilotwarned BOOLEAN
+)
+BEGIN
+  DECLARE tempState INTEGER;
+  DECLARE tempCond INTEGER;
+  DECLARE taid INTEGER;
+  DECLARE tcid INTEGER;
+  
+  
+  SELECT COUNT(airports.aid) INTO tempState FROM airports WHERE airports.airportName=BairportName;
+  IF tempState=0 THEN
+    INSERT INTO airports(airportName,state) VALUES (BairportName,Bstate);
+  END IF;
+  
+  SELECT COUNT(conditions.cid) INTO tempCond FROM conditions WHERE 
+  conditions.`condition`=Bskycondition;
+  IF tempCond=0 THEN
+    INSERT INTO conditions(`condition`) VALUES (Bskycondition);
+  END IF;
+  
+  SELECT airports.aid  INTO taid FROM airports WHERE airports.airportName=BairportName AND airports.state=Bstate;
+  
+  SELECT conditions.cid INTO tcid FROM conditions  WHERE conditions.`condition`=Bskycondition;
+  
+  INSERT INTO incidents(rid,`date`,origin, airline,aircraft, flightPhase,
+  altitude, conditions, warning) VALUES (Bid, Bdate,taid,Bairline,
+  Baircraft, BflightPhase, Balititude,tcid, Bpilotwarned);
+  
+END;"

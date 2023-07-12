@@ -1,0 +1,6 @@
+"2","Error in .local(conn, statement, ...) : 
+  could not run statement: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '--Check if the airport exists, add it if not exists.
+ 
+  SELECT COUNT(airports.a' at line 19
+"
+"2","Failed to execute SQL chunk"

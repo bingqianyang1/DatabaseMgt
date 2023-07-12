@@ -1,0 +1,4 @@
+"0","#re-define the pilot value"
+"0","df$pilot_warned_flag[df$pilot_warned_flag == ""Y""] <- TRUE"
+"0","df$pilot_warned_flag[df$pilot_warned_flag == ""N""] <- FALSE"
+"0",""

@@ -1,0 +1,15 @@
+"0","CREATE TABLE incidents (
+  rid INTEGER NOT NULL,
+  date DATE NOT NULL,
+  origin INTEGER NOT NULL,
+  airline VARCHAR(200),
+  aircraft VARCHAR(50), 
+  flightPhase VARCHAR(50) NOT NULL, 
+  altitude INTEGER, 
+  conditions INTEGER NOT NULL, 
+  warning Boolean,
+  PRIMARY KEY (rid),
+  FOREIGN KEY (origin) REFERENCES airports(aid),
+  FOREIGN KEY (conditions) REFERENCES conditions(cid)
+)
+"

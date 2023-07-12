@@ -1,0 +1,93 @@
+---
+title: "R Notebook"
+output: html_notebook
+name: Bingqian Yang
+course: CS5200 Spr 2023
+date: 4/18/2023
+---
+
+```{r}
+library(RMySQL)
+```
+
+```{r}
+db_user <- 'root'
+db_password <- rstudioapi::askForPassword()
+db_host <- 'localhost' 
+db_port <- 3306
+dbcon <-  dbConnect(MySQL(), user = db_user, password = db_password, host = db_host, port = db_port)
+```
+
+```{sql connection=dbcon}
+USE Practicum2
+```
+```{sql connection=dbcon}
+SELECT * FROM AuthorFacts
+```
+```{sql connection=dbcon}
+SELECT * FROM JournalFacts
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM ArticleDim
+```
+
+
+
+
+
+1. Top ten authors with the most publications.
+```{sql connection=dbcon}
+SELECT *
+FROM AuthorFacts
+ORDER BY ArticleNum DESC
+LIMIT 10
+
+```
+
+We ran an analytical query to identify the top ten authors with the most publications. 
+The results of the query are presented above.
+From the table, we can find these E Costa have the most publications, which is 37 articles. E D Thomas is the second one.
+This information could be useful in identifying key contributors to our data warehouse 
+and determining areas of research where we may have expertise.
+
+
+
+
+
+2. Top journal with the most articles per year.
+
+```{sql connection=dbcon}
+SELECT Year, JournalName, ArticleCount
+FROM (
+  SELECT Year, JournalName, COUNT(*) AS ArticleCount,
+         ROW_NUMBER() OVER (PARTITION BY Year ORDER BY COUNT(*) DESC) AS RN
+  FROM ArticleDim ad
+  JOIN JournalFacts jf ON ad.JournalID = jf.JournalID
+  GROUP BY Year, JournalName
+) t
+WHERE RN = 1
+ORDER BY Year;
+```
+
+
+To identify the top journal with the most articles each year, 
+we utilized our MySQL data warehouse and executed the above query.
+
+From the table, we can easily find the top journal with the most articles per year.
+In the year 1975, Journal "Annales de l'anesthesiologie francaise" has the most articles which is 55 articles. 
+In the year 1976, Journal "The Journal of biological chemistry" has 197 articles.
+In the year 1977, Journal "The Journal of biological chemistry" has 151 articles.
+In the year 1977, Journal "	Proceedings of the Royal Society of London. Series B, Biological sciences" has the most articles which is 151 articles.
+This analysis helps us understand the distribution of our publications across different journals and enables us to make informed decisions regarding our publishing strategy. It is worth continuing to monitor this metric over time to ensure we stay up-to-date with the latest trends in research publishing. 
+
+
+
+
+```{r}
+dbDisconnect(dbcon)
+```
+
+
+

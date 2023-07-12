@@ -1,0 +1,5 @@
+"0","```r
+#why you built that trigger and what its intended purpose is:
+#The trigger I built is to manage the constraint of the lengthInMin in the Module table.
+#I built it because there should be a restriction for the minimum time of a module. The trigger checks before there is an insertion on the table Module. If the lengthInMin is less than 15 minutes, it will raise an error. This ensures the integrity of the data in the database.
+```"

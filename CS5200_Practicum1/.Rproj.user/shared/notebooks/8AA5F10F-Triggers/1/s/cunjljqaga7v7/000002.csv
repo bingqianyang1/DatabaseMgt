@@ -1,0 +1,8 @@
+"0","```sql
+CREATE TABLE Module(
+  number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  lengthInMin INTEGER,
+  PRIMARY KEY (number, title)
+)
+```"

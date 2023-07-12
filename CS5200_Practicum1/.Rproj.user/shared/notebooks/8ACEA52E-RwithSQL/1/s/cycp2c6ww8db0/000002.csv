@@ -1,0 +1,12 @@
+"0","```r
+# 2)
+#install.packages(\"sqldf\")
+library(sqldf)
+query <- 
+\"select InvoiceId, sum(ExtPrice) as Total, count(Quantity) as ItemNumber
+from rs
+group by InvoiceId\"
+
+res <- sqldf(query)
+res
+```"

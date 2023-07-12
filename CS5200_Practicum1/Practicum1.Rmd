@@ -1,0 +1,362 @@
+---
+title: "CS5200 Practicum I"
+output: html_notebook
+member: "Bingqian Yang"
+email: "yang.bin@northeastern.edu"
+---
+
+
+```{r}
+library(DBI)
+library(RMySQL)
+library(dplyr)
+
+db_user <- 'root'
+db_password <- rstudioapi::askForPassword()
+db_name <- 'Practicum1'
+db_host <- 'localhost' 
+db_port <- 3306
+
+dbcon <-  dbConnect(MySQL(), user = db_user, password = db_password, dbname = db_name, host = db_host, port = db_port)
+```
+
+1-B:
+Create a table that stores airports and states called airports(aid, airportName, airportCode, state)
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS airports
+```
+
+```{sql connection=dbcon}
+CREATE TABLE airports (
+  aid INTEGER NOT NULL AUTO_INCREMENT, 
+  airportName VARCHAR(100) NOT NULL, 
+  airportCode VARCHAR(10), 
+  state VARCHAR(50) NOT NULL,
+  PRIMARY KEY (aid)
+)
+```
+
+
+1-D:
+Create a lookup table conditions(cid, condition, explanation) and link this lookup table to the incidents table with the conditions foreign key.
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS conditions
+```
+
+```{sql connection=dbcon}
+CREATE TABLE conditions (
+  cid INTEGER NOT NULL AUTO_INCREMENT,
+  `condition` VARCHAR(100) NOT NULL,
+  explanation VARCHAR(500),
+  PRIMARY KEY (cid)
+)
+```
+
+
+
+
+1-A:
+Create a table that stores wildlife strike incidents called incidents(rid, date, origin, airline, aircraft, flightPhase, altitude, conditions, warning). 
+1-C:
+Link the incidents and airports tables via the origin foreign key in incidents to the primary key aid in airports.
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS incidents
+```
+
+```{sql connection=dbcon}
+CREATE TABLE incidents (
+  rid INTEGER NOT NULL,
+  date DATE NOT NULL,
+  origin INTEGER NOT NULL,
+  airline VARCHAR(200),
+  aircraft VARCHAR(50), 
+  flightPhase VARCHAR(50) NOT NULL, 
+  altitude INTEGER, 
+  conditions INTEGER NOT NULL, 
+  warning Boolean,
+  PRIMARY KEY (rid),
+  FOREIGN KEY (origin) REFERENCES airports(aid),
+  FOREIGN KEY (conditions) REFERENCES conditions(cid)
+)
+
+```
+
+
+
+
+1-E:
+Harmonize the flight phases to be one of: takeoff, landing, inflight, unknown. 
+=========
+Demonstrated below.
+
+
+1-F:
+Assume "Business" to be an airline name.
+=========
+"Bussiness" is already an airline name.
+
+
+1-G:
+=========
+Demonstrated below.
+
+
+2: Load the Bird Strikes CSV file. Once loaded, populate the tables with the data from the appropriate columns. Omit the columns from the CSV that are not referenced in the tables.
+
+```{r}
+#Load the Bird Strikes CSV file.
+df <- read.csv("BirdStrikesData-V2.csv", header = TRUE, stringsAsFactors = FALSE)
+```
+
+
+
+```{r}
+# 1-E: Harmonize the flight phases to be one of: takeoff, landing, inflight, unknown.
+df$flight_phase[df$flight_phase == "Climb"] <- "takeoff"
+df$flight_phase[df$flight_phase == "Take-off run"] <- "takeoff"
+df$flight_phase[df$flight_phase == "Landing Roll"] <- "landing"
+df$flight_phase[df$flight_phase == "Approach"] <- "landing"
+df$flight_phase[df$flight_phase == "Descent"] <- "inflight"
+df$flight_phase[df$flight_phase == "Taxi"] <- "unknown"
+df$flight_phase[df$flight_phase == "Parked"] <- "unknown"
+df$flight_phase[df$flight_phase == ""] <- "unknown"
+
+unique(df$flight_phase)
+```
+
+
+1-G:Remove all military flights
+```{r}
+df <- df[!(grepl("MILITARY", df$airline)), ]
+```
+
+
+2:
+
+Records (rows) from the CSV that do not have flight information may be omitted:
+
+```{r}
+#remove records that has no flight information
+df <- df[complete.cases(df),]
+```
+
+
+If there is no airport or airline, then link to a "sentinel" airline or airport:
+```{r}
+#add value "unknown" for empty airport and airline
+df$airport <- ifelse(is.na(df$airport), "unknown", df$airport)
+
+df$airline <- ifelse(is.na(df$airline), "unknown", df$airline)
+
+```
+
+
+Convert the pilot value to boolean:
+```{r}
+
+df$pilot_warned_flag[df$pilot_warned_flag == "Y"] <- TRUE
+df$pilot_warned_flag[df$pilot_warned_flag == "N"] <- FALSE
+```
+
+
+Populate the airports table
+```{r}
+airports_df <- data.frame(airportName=df$airport, state=df$origin)
+
+airports_df <- airports_df[!duplicated(airports_df), ]
+
+
+airports_df <- cbind(aid = 1:nrow(airports_df), airports_df)
+```
+
+
+Populate the table - conditions
+```{r}
+conditions_df <-data.frame(condition = unique(df$sky_conditions))
+
+conditions_df <- cbind(cid = 1:nrow(conditions_df), conditions_df)
+
+
+```
+
+
+Populate the table - incidents
+```{r}
+incidents_df <- data.frame(rid = df$rid, date = df$flight_date, origin = df$airport, airline = df$airline, aircraft = df$aircraft, flightPhase = df$flight_phase, altitude = df$altitude_ft, conditions = df$sky_conditions, 
+                           warning = df$pilot_warned_flag)
+#format the date
+incidents_df$date <- as.Date(incidents_df$date, format = "%m/%d/%Y")
+
+
+#match the foreign key - origin
+incidents_df <- incidents_df %>% 
+  left_join(airports_df %>% select(aid, airportName), by = c("origin" = "airportName")) %>% 
+  select(rid, date, origin = aid, airline, aircraft, flightPhase, altitude, conditions, warning)
+
+#match the foreign key - condition
+incidents_df <- incidents_df %>% 
+  left_join(conditions_df %>% select(cid, condition), by = c("conditions" = "condition")) %>% 
+  select(rid, date, origin, airline, aircraft, flightPhase, altitude, conditions = cid, warning)
+```
+
+
+Write the data frames to the MySQL database
+```{r}
+dbSendQuery(dbcon, "SET GLOBAL local_infile = true;")
+
+dbWriteTable(dbcon, "incidents", incidents_df, append = TRUE, row.names = FALSE)
+
+dbWriteTable(dbcon, "airports", airports_df, append = T,row.names=FALSE)
+
+dbWriteTable(dbcon, "conditions", conditions_df, append = T,row.names=FALSE)
+```
+
+
+3.Show that the loading of the data worked by displaying parts of each table:
+
+```{sql connection=dbcon}
+SELECT * FROM incidents LIMIT 10
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM airports LIMIT 10
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM conditions
+```
+
+
+4. Create a SQL query against your database to find the top-10 airlines with the most number of incidents:
+
+```{sql connection=dbcon}
+
+SELECT airline, COUNT(airline) as incidentsNumber
+FROM incidents 
+GROUP BY airline 
+ORDER BY incidentsNumber DESC 
+LIMIT 10
+```
+
+
+5. Create a SQL query against your database to find the flight phase that had an above average number bird strike incidents (during any flight phase):
+```{sql connection=dbcon}
+SELECT flightPhase, COUNT(*) AS incidentsNumber
+FROM incidents
+GROUP BY flightPhase
+HAVING incidentsNumber > 
+(SELECT AVG(incidentsNo) FROM (SELECT COUNT(*) AS incidentsNo FROM incidents GROUP BY flightPhase) AS sub)
+```
+
+
+6. Create a SQL query against your database to find the maximum number of bird strike incidents by month (across all years). Include all airlines and all flights:
+```{sql connection=dbcon}
+SELECT MONTHNAME(date) AS month, COUNT(*) AS incidentsNumber FROM incidents
+GROUP BY month
+ORDER BY incidentsNumber DESC
+LIMIT 1
+```
+
+
+7.Build a column chart that visualizes the number of bird strikes incidents per year from 2005 to 2011. Adorn the graph with appropriate axis labels, titles, legend, data labels, etc:
+```{r}
+library(ggplot2)
+
+
+query <- "
+SELECT YEAR(date) as year, COUNT(*) as incidentsNumber 
+FROM incidents 
+WHERE YEAR(date) BETWEEN 2005 AND 2011 
+GROUP BY year;"
+
+incidentsYearly <- dbGetQuery(dbcon, query)
+
+
+ggplot(incidentsYearly, aes(x = year, y = incidentsNumber))  + geom_col() + labs(title = "Incidents Number from 2005 to 2011", x = "Year", y = "Number of Incidents") 
+
+```
+
+
+8. Create a stored procedure in MySQL that adds a new incident to the database. You may decide what you need to pass to the stored procedure to add a bird strike incident and you must account for there being potentially a new airport. After insertion, show (in R) that your procedure worked. 
+```{sql connection=dbcon}
+DROP PROCEDURE IF EXISTS AddNewIncident
+```
+
+
+```{sql connection=dbcon}
+
+CREATE PROCEDURE AddNewIncident(
+IN Rid INTEGER,
+IN Date DATE,
+IN AirportName VARCHAR(200),
+IN State VARCHAR(200),
+IN Airline VARCHAR(200),
+IN Aircraft VARCHAR(200),
+IN FlightPhase VARCHAR(200),
+IN Alititude INTEGER,
+IN Conditions VARCHAR(200),
+IN Warning BOOLEAN
+)
+
+
+BEGIN
+  DECLARE newAirpot INTEGER;
+  DECLARE newCondition INTEGER;
+  DECLARE aaid INTEGER;
+  DECLARE ccid INTEGER;
+  
+  -- Check if the airport exists, add it if not exists.
+  SELECT COUNT(airports.aid) INTO newAirpot FROM airports WHERE
+  airports.airportName = AirportName;
+  IF newAirpot = 0 THEN
+    INSERT INTO airports(airportName, state) VALUES (AirportName, State);
+  END IF;
+  
+  -- Check if the condition exists, add it if not exists.
+  SELECT COUNT(conditions.cid) INTO newCondition FROM conditions WHERE 
+  conditions.`condition` = Conditions;
+  IF newCondition = 0 THEN
+    INSERT INTO conditions(`condition`) VALUES (Conditions);
+  END IF;
+  
+  
+  -- Link the foreign keys
+  SELECT airports.aid  INTO aaid FROM airports WHERE
+  airports.airportName = AirportName AND airports.state = State;
+  
+  SELECT conditions.cid INTO ccid FROM conditions  WHERE
+  conditions.`condition` = Conditions;
+  
+  -- Insert new incident
+  INSERT INTO incidents(rid, Date, origin, airline, aircraft, flightPhase,
+  altitude, conditions, warning) VALUES (Rid, Date, aaid, Airline, Aircraft,
+  FlightPhase, Alititude, ccid, Warning);
+  
+END;
+```
+
+
+Insert the new incidents:
+```{sql connection=dbcon}
+CALL AddNewIncident(1,"2023-2-28","Test Airport","Bay Area","Test Airline", "Airplane", "Descent", 1500, "No Cloud", TRUE)
+```
+
+
+Show the process worked:
+```{sql connection=dbcon}
+SELECT * FROM incidents WHERE rid = 1
+```
+
+
+
+```{r}
+dbDisconnect(dbcon)
+```
+
+
+
+
+

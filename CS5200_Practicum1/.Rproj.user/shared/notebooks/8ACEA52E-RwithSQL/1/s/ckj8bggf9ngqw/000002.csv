@@ -1,0 +1,16 @@
+"0","```r
+# 4)
+library(sqldf)
+
+invoices <- dbGetQuery(dbcon, \"SELECT * FROM invoices\")
+
+invoices$DiscPrice <- res$Total
+
+for (i in 1:nrow(res)) {
+  if (res$ItemNumber[i] > 5) {
+    invoices$DiscPrice[i] <- 0.9 * invoices$DiscPrice[i]
+  }
+}
+
+invoices
+```"

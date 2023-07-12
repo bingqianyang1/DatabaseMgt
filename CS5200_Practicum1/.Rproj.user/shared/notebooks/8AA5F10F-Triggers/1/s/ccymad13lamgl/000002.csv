@@ -1,0 +1,18 @@
+"0","```sql
+
+CREATE TRIGGER min_length_constraint
+BEFORE INSERT ON Module
+FOR EACH ROW
+BEGIN
+SELECT
+CASE
+   WHEN NEW.lengthInMin < 30 THEN 
+   RAISE (ABORT, 'The minimum length of the module cannot be less than 30 minutes.')
+
+
+   WHEN NEW.lengthInMin > 240 THEN 
+   RAISE (ABORT, 'The minimum length of the module cannot be greater than 240 minutes.')
+   END;
+END;
+
+```"

@@ -1,0 +1,2 @@
+"0","#remove records that has no flight information"
+"0","df <- df[complete.cases(df),]"

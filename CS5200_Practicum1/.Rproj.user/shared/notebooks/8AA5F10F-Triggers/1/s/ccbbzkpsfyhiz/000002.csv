@@ -1,0 +1,9 @@
+"0","```r
+library(RSQLite)
+
+fpath = getwd()
+dbfile = \"/authorDB.sqlite\"
+
+
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(fpath, dbfile))
+```"

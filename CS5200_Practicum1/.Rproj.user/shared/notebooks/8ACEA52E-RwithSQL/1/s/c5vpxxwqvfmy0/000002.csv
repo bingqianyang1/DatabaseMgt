@@ -1,0 +1,10 @@
+"0","```r
+# 3)
+#install.packages(\"ggplot2\")  
+library(ggplot2)
+
+ggplot(res, aes(x = ItemNumber, y = Total)) + geom_point() + xlab(\"Item Number\") +
+  ylab(\"Total Amount\")
+```"
+"1","Warning: call dbDisconnect() when finished working with a connection
+"

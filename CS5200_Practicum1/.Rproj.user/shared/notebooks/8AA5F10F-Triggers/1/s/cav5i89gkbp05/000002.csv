@@ -1,0 +1,4 @@
+"0","```sql
+DROP TRIGGER min_length_constraint
+
+```"

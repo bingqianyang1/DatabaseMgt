@@ -1,0 +1,5 @@
+"0","#add value ""unknown"" for empty airport and airline"
+"0","df$airport <- ifelse(is.na(df$airport), ""unknown"", df$airport)"
+"0",""
+"0","df$airline <- ifelse(is.na(df$airline), ""unknown"", df$airline)"
+"0",""
